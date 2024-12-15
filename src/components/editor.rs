@@ -235,6 +235,7 @@ pub fn Editor() -> Element {
                         ((None, KeyU), "う"),
                         ((None, KeyE), "え"),
                         ((None, KeyO), "お"),
+                        ((Some(KeyD), KeyO), "ど"),
                     ]
                     .into_iter()
                     .collect()
@@ -431,8 +432,8 @@ pub fn Editor() -> Element {
                                     ///
                                     ///
                                     let html_node = r#"
-                                                                                                                                                                                                                                                                                                                                                                                                        <input style="">
-                                                                                                                                                                                                                                                                                                                                                                                                        </input>"#;
+                                                                                                                                                                                                                                                                                                                                                                                                                        <input style="">
+                                                                                                                                                                                                                                                                                                                                                                                                                        </input>"#;
                                     styled_lines.push((html_node.to_string(), "".to_string()));
                                     styled_lines.push((transformed_line, "".to_string()));
                                     combined_style.push_str("");
