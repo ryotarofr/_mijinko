@@ -1,4 +1,5 @@
 use crate::config::constants::LOREM_IPSUM;
+use crate::config::kana_map::KANA_MAP;
 use crate::context::theme_context::Theme;
 use crate::r#fn::editor_state::EditorState;
 use crate::types::enums::{Direction, Glyph};
@@ -32,7 +33,7 @@ pub fn Editor() -> Element {
     let mut editor_state = use_signal(|| EditorState::from(LOREM_IPSUM));
     let mut theme = use_context::<Signal<Theme>>();
     let mut is_ime = use_signal(|| false);
-    let mut last_key: Signal<Option<Code>> = use_signal(|| None);
+    let mut last_keys_vec: Signal<Vec<Code>> = use_signal(|| Vec::new());
 
     let mut ime_buffer = use_signal(String::new); // IMEの入力を一時的に保持するバッファ
 
@@ -177,90 +178,38 @@ pub fn Editor() -> Element {
             return;
         }
 
-        // info!(
-        //     "editor_state.selection_start: {:?}, editor_state.selection_end: {:?}",
-        //     editor_state.read().selection_start,
-        //     editor_state.read().selection_end,
-        // );
-
         // IME mode
         if *is_ime.read() {
             if *is_ime.read() {
-                let kana_map: std::collections::HashMap<(Option<Code>, Code), &str> = {
-                    use Code::*;
-                    [
-                        ((Some(KeyK), KeyA), "か"),
-                        ((Some(KeyK), KeyI), "き"),
-                        ((Some(KeyK), KeyU), "く"),
-                        ((Some(KeyK), KeyE), "け"),
-                        ((Some(KeyK), KeyO), "こ"),
-                        ((Some(KeyS), KeyA), "さ"),
-                        ((Some(KeyS), KeyI), "し"),
-                        ((Some(KeyS), KeyU), "す"),
-                        ((Some(KeyS), KeyE), "せ"),
-                        ((Some(KeyS), KeyO), "そ"),
-                        ((Some(KeyT), KeyA), "た"),
-                        ((Some(KeyT), KeyI), "ち"),
-                        ((Some(KeyT), KeyU), "つ"),
-                        ((Some(KeyT), KeyE), "て"),
-                        ((Some(KeyT), KeyO), "と"),
-                        ((Some(KeyN), KeyA), "な"),
-                        ((Some(KeyN), KeyI), "に"),
-                        ((Some(KeyN), KeyU), "ぬ"),
-                        ((Some(KeyN), KeyE), "ね"),
-                        ((Some(KeyN), KeyO), "の"),
-                        ((Some(KeyH), KeyA), "は"),
-                        ((Some(KeyH), KeyI), "ひ"),
-                        ((Some(KeyH), KeyU), "ふ"),
-                        ((Some(KeyH), KeyE), "へ"),
-                        ((Some(KeyH), KeyO), "ほ"),
-                        ((Some(KeyM), KeyA), "ま"),
-                        ((Some(KeyM), KeyI), "み"),
-                        ((Some(KeyM), KeyU), "む"),
-                        ((Some(KeyM), KeyE), "め"),
-                        ((Some(KeyM), KeyO), "も"),
-                        ((Some(KeyY), KeyA), "や"),
-                        ((Some(KeyY), KeyU), "ゆ"),
-                        ((Some(KeyY), KeyO), "よ"),
-                        ((Some(KeyR), KeyA), "ら"),
-                        ((Some(KeyR), KeyI), "り"),
-                        ((Some(KeyR), KeyU), "る"),
-                        ((Some(KeyR), KeyE), "れ"),
-                        ((Some(KeyR), KeyO), "ろ"),
-                        ((Some(KeyW), KeyA), "わ"),
-                        ((Some(KeyW), KeyO), "を"),
-                        ((Some(KeyN), KeyN), "ん"),
-                        ((None, KeyA), "あ"),
-                        ((None, KeyI), "い"),
-                        ((None, KeyU), "う"),
-                        ((None, KeyE), "え"),
-                        ((None, KeyO), "お"),
-                        ((Some(KeyD), KeyO), "ど"),
-                    ]
-                    .into_iter()
-                    .collect()
-                };
-
                 let current_code = event.code();
 
-                let previous_key = *last_key.read();
-                if let Some(previous_key) = previous_key {
-                    // other than 「母音」
-                    if let Some(&kana) = kana_map.get(&(Some(previous_key), current_code)) {
+                let mut keys = last_keys_vec.read().clone();
+                keys.push(current_code);
+
+                // 最大3キーまで試す(必要ならもっと増やしてもよい)
+                // lengthが長い順に試すことで、より長いコンボ優先
+                let mut matched = false;
+                for len in (1..=std::cmp::min(keys.len(), 3)).rev() {
+                    let slice = &keys[keys.len() - len..]; // 最後のlenキー
+                    if let Some(&kana) = KANA_MAP.get(slice) {
+                        // マッチした場合、文字挿入
                         editor_state.with_mut(|e| e.insert_text(kana));
-                        last_key.set(None); // reset
-                        return;
+                        // マッチしたキー分を削除
+                        for _ in 0..len {
+                            keys.pop();
+                        }
+                        matched = true;
+                        break;
                     }
                 }
 
-                // 「母音」(if `last_key` is `None`)
-                if let Some(&kana) = kana_map.get(&(None, current_code)) {
-                    editor_state.with_mut(|e| e.insert_text(kana));
-                    last_key.set(None); // if 「母音」 reset either
-                } else {
-                    // 「子音」Update `last_key` as waiting for next key
-                    last_key.set(Some(current_code));
+                if !matched {
+                    // マッチしなかった場合は、キーシーケンスを保持して次のキー入力を待つ
+                    // 但し、あまりにもマッチしない場合はresetするロジックを入れても良い
                 }
+
+                // 更新
+                last_keys_vec.set(keys);
             }
             code_events![
                 event, editor_state as e,
@@ -432,8 +381,8 @@ pub fn Editor() -> Element {
                                     ///
                                     ///
                                     let html_node = r#"
-                                                                                                                                                                                                                                                                                                                                                                                                                        <input style="">
-                                                                                                                                                                                                                                                                                                                                                                                                                        </input>"#;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <input style="">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </input>"#;
                                     styled_lines.push((html_node.to_string(), "".to_string()));
                                     styled_lines.push((transformed_line, "".to_string()));
                                     combined_style.push_str("");
