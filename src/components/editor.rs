@@ -1,11 +1,14 @@
+use dioxus::prelude::*;
+use keyboard_types::{Code, Key, Modifiers};
+use regex::Regex;
+use serde_json::Value;
+
 use crate::config::constants::LOREM_IPSUM;
 use crate::config::kana_map::KANA_MAP;
 use crate::context::theme_context::Theme;
 use crate::r#fn::editor_state::EditorState;
+use crate::r#fn::line::Line;
 use crate::types::enums::{Direction, Glyph};
-use dioxus::prelude::*;
-use keyboard_types::{Code, Key, Modifiers};
-use serde_json::Value;
 
 macro_rules! code_events {
     ($event:ident, $editor:ident as $alias:ident,
@@ -254,7 +257,19 @@ pub fn Editor() -> Element {
                         for Code::ArrowDown => e.go_to_line(Direction::Forward),
                         for Code::ArrowRight => e.move_cursor(Direction::Forward),
                         for Code::ArrowLeft => e.move_cursor(Direction::Backward),
-                        for Code::Enter => e.next_line_or_new()
+                        for Code::Enter => {
+                            // 改行前に現在行を確認
+                            let current_line_idx = e.current_line;
+                            let current_line_content = e.get_line_content(current_line_idx);
+
+                            // 改行処理
+                            e.next_line_or_new();
+
+                            // numberlist行だったなら、次の数字を挿入
+                            if let Some(next_item) = next_list_item(&current_line_content) {
+                                e.insert_text(&next_item);
+                            }
+                        }
                 ],
                 key => [
                     for Key::Character(n) => e.insert(&n)
@@ -293,113 +308,9 @@ pub fn Editor() -> Element {
                         };
                         let opacity = if current { "100%" } else { "20%" };
                         let (rendered_line, line_style): (Vec<(String, String)>, String) = {
-                            let mut styled_lines: Vec<(String, String)> = Vec::new();
-                            let mut combined_style = String::new();
-                            let line_content: String = line
-                                .as_vec()
-                                .iter()
-                                .map(|glyph| match glyph {
-                                    Glyph::Text(text) => text.clone(),
-                                    Glyph::Char(c) => c.to_string(),
-                                    Glyph::Cursor => {
-                                        if *is_ime.read() {
-                                            "❮:IME".to_string()
-                                        } else {
-                                            "❮".to_string()
-                                        }
-                                    }
-                                    Glyph::HTMLNode(value) => value.clone(),
-                                    Glyph::Component(_) => "<Component>".to_string(),
-                                })
-                                .collect();
-                            match line_content.as_str() {
-                                line if line.starts_with("#\u{00A0}") => {
-                                    let transformed_line = line_content
-                                        .replacen("#\u{00A0}", "", 1);
-                                    styled_lines
-                                        .push((
-                                            transformed_line,
-                                            "font-size: 36px; font-weight: bold;".to_string(),
-                                        ));
-                                    combined_style
-                                        .push_str(
-                                            "font-size: 28px; margin-bottom: 8px; padding-left: 16px; border-bottom: 0.5px solid rgba(0, 0, 0, 0.5);",
-                                        );
-                                }
-                                line if line.starts_with("##\u{00A0}") => {
-                                    let transformed_line = line_content
-                                        .replacen("##\u{00A0}", "", 2);
-                                    styled_lines
-                                        .push((
-                                            transformed_line,
-                                            "font-size: 30px; font-weight: bold;".to_string(),
-                                        ));
-                                    combined_style
-                                        .push_str(
-                                            "font-size: 24px; margin-bottom: 4px; padding-left: 8px;",
-                                        );
-                                }
-                                line if line.starts_with("###\u{00A0}") => {
-                                    let transformed_line = line_content
-                                        .replacen("###\u{00A0}", "", 3);
-                                    styled_lines
-                                        .push((
-                                            transformed_line,
-                                            "font-size: 24px; font-weight: bold;".to_string(),
-                                        ));
-                                    combined_style
-                                        .push_str("font-size: 20px; padding-left: 4px;");
-                                }
-                                line if line.starts_with("####\u{00A0}") => {
-                                    let transformed_line = line_content
-                                        .replacen("####\u{00A0}", "", 4);
-                                    styled_lines
-                                        .push((
-                                            transformed_line,
-                                            "font-size: 16px; font-weight: bold;".to_string(),
-                                        ));
-                                    combined_style
-                                        .push_str("font-size: 16px; padding-left: 2px;");
-                                }
-                                line if line.starts_with("-\u{00A0}") => {
-                                    let transformed_line = line_content
-                                        .replacen("-\u{00A0}", "・", 1);
-                                    styled_lines
-                                        .push((transformed_line, "padding-left: 8px;".to_string()));
-                                    combined_style.push_str("padding-left: 8px;");
-                                }
-                                line if line.starts_with("```\u{00A0}") => {
-                                    let transformed_line = line_content
-                                        .replacen("```\u{00A0}", "", 1);
-                                    /// Example
-                                    ///
-                                    /// Input
-                                    ///     '```rs_(space)'
-                                    /// Output:
-                                    ///     1: <codeblock />
-                                    ///
-                                    ///
-                                    ///
-                                    let html_node = r#"
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <input style="">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </input>"#;
-                                    styled_lines.push((html_node.to_string(), "".to_string()));
-                                    styled_lines.push((transformed_line, "".to_string()));
-                                    combined_style.push_str("");
-                                }
-                                line if line.contains("WARNING") => {
-                                    styled_lines
-                                        .push((
-                                            line_content,
-                                            "color: red; font-weight: bold;".to_string(),
-                                        ));
-                                    combined_style.push_str("color: red;");
-                                }
-                                _ => {
-                                    styled_lines.push((line_content, "".to_string()));
-                                }
-                            }
-                            (styled_lines, combined_style)
+                            let line_content = cursor_view(line, *is_ime.read());
+                            let (line_text, combined_style) = markdown_view(&line_content);
+                            (line_text, combined_style)
                         };
                         rsx! {
                             div { style: "padding-right: 5px; text-align: right;",
@@ -410,7 +321,7 @@ pub fn Editor() -> Element {
                                 id: "L{line_number}",
                                 "line": "{line_number}",
                                 onmousedown: handle_clicks,
-                            
+
                                 // view convert TEXT
                                 {
                                     rendered_line
@@ -459,4 +370,178 @@ fn Sample() -> Element {
         button { onclick: move |_| count += 1, "Up high!" }
         button { onclick: move |_| count -= 1, "Down low!" }
     }
+}
+
+fn cursor_view(line: &Line, is_ime: bool) -> String {
+    line.as_vec()
+        .iter()
+        .map(|glyph| match glyph {
+            Glyph::Text(text) => text.clone(),
+            Glyph::Char(c) => c.to_string(),
+            Glyph::Cursor => {
+                if is_ime {
+                    "❮:IME".to_string()
+                } else {
+                    "❮".to_string()
+                }
+            }
+            Glyph::HTMLNode(value) => value.clone(),
+            Glyph::Component(_) => "<Component>".to_string(),
+        })
+        .collect()
+}
+
+fn markdown_view(line_content: &str) -> (Vec<(String, String)>, String) {
+    let mut styled_lines = Vec::new();
+    let mut combined_style = String::new();
+
+    // ヘッダ行など共通処理をまとめるためのヘルパー
+    fn push_styled_line(
+        styled_lines: &mut Vec<(String, String)>,
+        combined_style: &mut String,
+        transformed_line: String,
+        text_style: &str,
+        container_style: &str,
+    ) {
+        styled_lines.push((transformed_line, text_style.to_string()));
+        combined_style.push_str(container_style);
+    }
+
+    // インデント（先頭スペース）をカウント
+    let mut spaces = 0;
+    for ch in line_content.chars() {
+        if ch == ' ' {
+            spaces += 1;
+        } else {
+            break;
+        }
+    }
+    // インデントレベル(4スペース毎に一段下げる例)
+    let indent_level = spaces / 4;
+
+    // 行の先頭スペースを除いた文字列（リスト記号検出用）
+    let trimmed = &line_content[spaces..];
+
+    // 数字付きリスト用正規表現
+    let number_list_re = Regex::new(r"^\d+\.\u{00A0}").unwrap();
+    let is_numbered_list = number_list_re.is_match(trimmed);
+
+    // インデントに応じたスタイル
+    let indent_px = 8 * (indent_level + 1);
+    let list_text_style = format!("padding-left: {}px;", indent_px);
+    let list_container_style = list_text_style.clone();
+
+    match line_content {
+        // h1
+        line if line.starts_with("#\u{00A0}") => {
+            let transformed_line = line_content.replacen("#\u{00A0}", "", 1);
+            push_styled_line(
+                &mut styled_lines,
+                &mut combined_style,
+                transformed_line,
+                "font-size: 36px; font-weight: bold;",
+                "font-size: 28px; margin-bottom: 8px; padding-left: 16px; border-bottom: 0.5px solid rgba(0, 0, 0, 0.5);"
+            );
+        }
+        // h2
+        line if line.starts_with("##\u{00A0}") => {
+            let transformed_line = line_content.replacen("##\u{00A0}", "", 2);
+            push_styled_line(
+                &mut styled_lines,
+                &mut combined_style,
+                transformed_line,
+                "font-size: 30px; font-weight: bold;",
+                "font-size: 24px; margin-bottom: 4px; padding-left: 8px;",
+            );
+        }
+        // h3
+        line if line.starts_with("###\u{00A0}") => {
+            let transformed_line = line_content.replacen("###\u{00A0}", "", 3);
+            push_styled_line(
+                &mut styled_lines,
+                &mut combined_style,
+                transformed_line,
+                "font-size: 24px; font-weight: bold;",
+                "font-size: 20px; padding-left: 4px;",
+            );
+        }
+        // h4
+        line if line.starts_with("####\u{00A0}") => {
+            let transformed_line = line_content.replacen("####\u{00A0}", "", 4);
+            push_styled_line(
+                &mut styled_lines,
+                &mut combined_style,
+                transformed_line,
+                "font-size: 16px; font-weight: bold;",
+                "font-size: 16px; padding-left: 2px;",
+            );
+        }
+        // buble list
+        line if line.starts_with("-\u{00A0}") => {
+            let transformed_line = line_content.replacen("-\u{00A0}", "・", 1);
+            push_styled_line(
+                &mut styled_lines,
+                &mut combined_style,
+                transformed_line,
+                "padding-left: 8px;",
+                "padding-left: 8px;",
+            );
+        }
+        // number list
+        _ if is_numbered_list => {
+            // 数字リストはそのまま表示(必要なら書き換え可)
+            let transformed_line = line_content.to_string();
+            push_styled_line(
+                &mut styled_lines,
+                &mut combined_style,
+                transformed_line,
+                &list_text_style,
+                &list_container_style,
+            )
+        }
+        // codeblock
+        line if line.starts_with("```\u{00A0}") => {
+            let transformed_line = line_content.replacen("```\u{00A0}", "", 1);
+            let html_node = r#"<input style=""></input>"#;
+            styled_lines.push((html_node.to_string(), "".to_string()));
+            styled_lines.push((transformed_line, "".to_string()));
+            // この場合、combined_styleは変更しない
+        }
+        // warn
+        line if line.contains("WARNING") => {
+            push_styled_line(
+                &mut styled_lines,
+                &mut combined_style,
+                line_content.to_string(),
+                "color: red; font-weight: bold;",
+                "color: red;",
+            );
+        }
+        _ => {
+            // 特別な書式なしの場合
+            styled_lines.push((line_content.to_string(), "".to_string()));
+        }
+    }
+
+    (styled_lines, combined_style)
+}
+
+// リスト行を改行時に連続してリストを表示する関数
+fn next_list_item(line_content: &str) -> Option<String> {
+    // 数字付きリスト判定: "1.\u{00A0}" のようなパターンがあれば次の番号を返す
+    if let Some(idx) = line_content.find(".\u{00A0}") {
+        // idx以前が数字なら次の数値を生成
+        let number_str = &line_content[..idx];
+        if let Ok(num) = number_str.parse::<usize>() {
+            return Some(format!("{}.\u{00A0}", num + 1));
+        }
+    }
+
+    // 箇条書きリスト判定: "-\u{00A0}" を含んでいれば同じ記号を返す
+    if line_content.contains("-\u{00A0}") {
+        return Some("-\u{00A0}".to_string());
+    }
+
+    // どちらにも該当しなければNone
+    None
 }

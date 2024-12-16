@@ -35,6 +35,23 @@ macro_rules! with_cursor {
     };
 }
 impl EditorState {
+    pub fn get_line_content(&self, line_idx: usize) -> String {
+        if let Some(line) = self.contents.lines.get(line_idx - 1) {
+            line.as_vec()
+                .iter()
+                .map(|glyph| match glyph {
+                    Glyph::Text(t) => t.clone(),
+                    Glyph::Char(c) => c.to_string(),
+                    Glyph::Cursor => "❮".to_string(),
+                    Glyph::HTMLNode(v) => v.clone(),
+                    Glyph::Component(_) => "<Component>".to_string(),
+                })
+                .collect()
+        } else {
+            "".to_string()
+        }
+    }
+
     pub fn next_line_or_new(&mut self) {
         self.contents.add_empty_line(self.current_line);
 
