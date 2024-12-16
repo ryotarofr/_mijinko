@@ -64,11 +64,13 @@ impl EditorState {
     pub fn clear_cursor(&mut self, (line, pos): &(usize, usize)) {
         self.contents.lines[line - 1].as_vec_mut().remove(pos - 1);
     }
+
     pub fn insert_cursor(&mut self) {
         self.contents.lines[self.current_line - 1]
             .as_vec_mut()
             .insert(self.cursor_position - 1, Glyph::Cursor)
     }
+
     pub fn insert_char(&mut self, ch: char) {
         println!("Inserting char!");
         let position = self.cursor_position;
@@ -76,6 +78,7 @@ impl EditorState {
         self.contents
             .insert(self.current_line, position, Glyph::Char(ch));
     }
+
     pub fn insert_text(&mut self, text: &str) {
         println!("Inserting text!");
         let position = self.cursor_position;
@@ -89,9 +92,11 @@ impl EditorState {
             self.insert_text(&ch.to_string())
         }
     }
+
     pub fn current_line_length(&self) -> usize {
         self.contents.lines[self.current_line - 1].as_vec().len()
     }
+
     pub fn go_to_line(&mut self, rel: Direction) {
         let mut current_line = self.current_line;
         current_line = (current_line as isize + rel as isize) as usize;
@@ -240,6 +245,7 @@ impl EditorState {
             },
         }
     }
+
     pub fn join_lines(&mut self) {
         with_cursor!(|self| {
             let mut line = self.contents.lines.remove(self.current_line - 1);
