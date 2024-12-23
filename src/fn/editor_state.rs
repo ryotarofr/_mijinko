@@ -9,8 +9,8 @@ pub struct EditorState {
     pub contents: EditorData,
     pub current_line: usize,
     pub cursor_position: usize,
-    pub selection_start: usize,
-    pub selection_end: usize,
+    // pub selection_start: usize,
+    // pub selection_end: usize,
 }
 
 impl From<&'_ str> for EditorState {
@@ -19,8 +19,8 @@ impl From<&'_ str> for EditorState {
         EditorState {
             cursor_position: 1,
             current_line: 1,
-            selection_start: 0, // 選択範囲の初期位置（カーソルと同じ）
-            selection_end: 0,   // 選択範囲の終了位置（カーソルと同じ）
+            // selection_start: 0, // 選択範囲の初期位置（カーソルと同じ）
+            // selection_end: 0,   // 選択範囲の終了位置（カーソルと同じ）
             contents: data,
         }
     }
@@ -156,69 +156,6 @@ impl EditorState {
         }
     }
 
-    pub fn move_cursor_selection(&mut self, rel: Direction, rel2: Direction) {
-        let extend_selection = matches!(rel2, Direction::Forward); // シフトキーが押された状態を仮定
-
-        if let Direction::Backward = rel {
-            let new_position = self.cursor_position.saturating_sub(1); // 範囲外アクセスを防ぐ
-            if new_position < 1 && self.current_line < 2 {
-                return;
-            }
-
-            with_cursor!(|self| {
-                if new_position >= 1 {
-                    self.cursor_position = new_position;
-                    if extend_selection {
-                        self.selection_end = self.cursor_position;
-                    } else {
-                        self.selection_start = self.cursor_position;
-                        self.selection_end = self.cursor_position;
-                    }
-                }
-                if new_position < 1 {
-                    self.current_line = self.current_line.saturating_sub(1);
-                    self.set_cursor_end_of_line();
-                    if extend_selection {
-                        self.selection_end = self.cursor_position;
-                    } else {
-                        self.selection_start = self.cursor_position;
-                        self.selection_end = self.cursor_position;
-                    }
-                }
-            });
-        }
-
-        if let Direction::Forward = rel {
-            let new_position = self.cursor_position + 1;
-            let end_of_line = self.cursor_position == self.current_line().as_vec().len();
-            let last_line = self.current_line == self.contents.lines.len();
-            if end_of_line && last_line {
-                return;
-            }
-            with_cursor!(|self| {
-                if end_of_line {
-                    self.current_line += 1;
-                    self.cursor_position = 1;
-                    if extend_selection {
-                        self.selection_end = self.cursor_position;
-                    } else {
-                        self.selection_start = self.cursor_position;
-                        self.selection_end = self.cursor_position;
-                    }
-                }
-                if !end_of_line {
-                    self.cursor_position = new_position;
-                    if extend_selection {
-                        self.selection_end = self.cursor_position;
-                    } else {
-                        self.selection_start = self.cursor_position;
-                        self.selection_end = self.cursor_position;
-                    }
-                }
-            });
-        }
-    }
-
     pub fn set_cursor(&mut self, line: usize, cursor: usize) {
         with_cursor!(|self| {
             self.current_line = line;
@@ -312,67 +249,6 @@ impl EditorState {
             Glyph::Component(Sample), // Sampleコンポーネントを追加
         );
     }
-
-    // pub fn line_length(&self, line_number: usize) -> usize {
-    //     self.contents[line_number].len()
-    // }
-
-    // pub fn set_cursor_start_of_line(&mut self) {
-    //     self.cursor_position = 0; // 行の先頭に移動
-    // }
-
-    // pub fn set_cursor_end_of_line(&mut self) {
-    //     if let Some(line) = self.contents.get(self.current_line) {
-    //         self.cursor_position = line.len(); // 行の末尾に移動
-    //     }
-    // }
-    // pub fn update_selection(&mut self, direction: Direction, extend: bool) {
-    //     if extend {
-    //         // シフトキーが押されている場合、選択範囲を拡張
-    //         match direction {
-    //             Direction::Forward => {
-    //                 self.selection_end += 1;
-    //             }
-    //             Direction::Backward => {
-    //                 if self.selection_end > self.selection_start {
-    //                     self.selection_end -= 1;
-    //                 }
-    //             }
-    //         }
-    //     } else {
-    //         // シフトキーが押されていない場合、カーソルだけを移動
-    //         self.selection_start = self.cursor_position;
-    //         self.selection_end = self.cursor_position;
-    //         match direction {
-    //             Direction::Forward => self.cursor_position += 1,
-    //             Direction::Backward => {
-    //                 if self.cursor_position > 0 {
-    //                     self.cursor_position -= 1;
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
-    // pub fn get_line(&self, line_number: usize) -> Option<&str> {
-    //     self.contents.lines().nth(line_number)
-    // }
-
-    // pub fn get_selected_text(&self) -> String {
-    //     if self.selection_start == self.selection_end {
-    //         return "".to_string();
-    //     }
-
-    //     if let Some(line) = self.contents.get_line(self.current_line) {
-    //         let start = self.selection_start.min(self.selection_end);
-    //         let end = self.selection_start.max(self.selection_end);
-    //         if start < line.len() && end <= line.len() {
-    //             return line[start..end].to_string();
-    //         }
-    //     }
-
-    //     "".to_string()
-    // }
 }
 
 fn Sample() -> Element {

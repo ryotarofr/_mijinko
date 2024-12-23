@@ -5,6 +5,7 @@ use crate::types::enums::Glyph;
 pub struct EditorData {
     pub lines: Vec<Line>,
 }
+
 impl EditorData {
     pub fn new() -> EditorData {
         EditorData {

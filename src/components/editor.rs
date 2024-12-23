@@ -34,6 +34,7 @@ macro_rules! code_events {
 
 pub fn Editor() -> Element {
     let mut editor_state = use_signal(|| EditorState::from(LOREM_IPSUM));
+    tracing::info!("editor_state :{:?}", editor_state.read());
     let mut theme = use_context::<Signal<Theme>>();
     let mut is_ime = use_signal(|| false);
     let mut last_keys_vec: Signal<Vec<Code>> = use_signal(|| Vec::new());
@@ -112,6 +113,12 @@ pub fn Editor() -> Element {
         });
     };
 
+    // TODO
+    fn is_numbered_list(line: &str) -> bool {
+        let number_list_re = Regex::new(r"^\d+\.\u{00A0}").unwrap();
+        number_list_re.is_match(line)
+    }
+
     let handle_global_keys = move |event: Event<KeyboardData>| {
         // switch themes with Cmd + K
         if event.modifiers().contains(Modifiers::META | Modifiers::ALT)
@@ -144,39 +151,6 @@ pub fn Editor() -> Element {
         // TODO : maybe del
         if event.modifiers().contains(Modifiers::META) && event.code() == Code::KeyA {
             editor_state.with_mut(|e| e.insert_pill("C-A"));
-            event.stop_propagation();
-            return;
-        }
-
-        if event.modifiers().contains(Modifiers::SHIFT) && event.code() == Code::ArrowLeft {
-            // editor_state
-            //     .with_mut(|e| e.move_cursor_selection(Direction::Forward, Direction::Forward)); // カーソルを右に移動し選択範囲を拡張
-            editor_state
-                .with_mut(|e| e.move_cursor_selection(Direction::Backward, Direction::Backward)); // カーソルを左に移動し選択範囲をリセット
-
-            // let toggle = !*is_ime.read();
-            // is_ime.set(toggle);
-            tracing::info!(
-                "Left selection_start: {:?}, selection_end: {:?}",
-                editor_state.read().selection_start,
-                editor_state.read().selection_end,
-            );
-            event.stop_propagation();
-            return;
-        }
-        if event.modifiers().contains(Modifiers::SHIFT) && event.code() == Code::ArrowRight {
-            editor_state
-                .with_mut(|e| e.move_cursor_selection(Direction::Forward, Direction::Forward)); // カーソルを右に移動し選択範囲を拡張
-                                                                                                // editor_state
-                                                                                                //     .with_mut(|e| e.move_cursor_selection(Direction::Backward, Direction::Backward)); // カーソルを左に移動し選択範囲をリセット
-
-            // let toggle = !*is_ime.read();
-            // is_ime.set(toggle);
-            tracing::info!(
-                "Right selection_start: {:?}, selection_end: {:?}",
-                editor_state.read().selection_start,
-                editor_state.read().selection_end,
-            );
             event.stop_propagation();
             return;
         }
@@ -265,10 +239,42 @@ pub fn Editor() -> Element {
                             // 改行処理
                             e.next_line_or_new();
 
-                            // numberlist行だったなら、次の数字を挿入
+                            // 改行時に前の行がリストなら、次の行もリストを挿入
                             if let Some(next_item) = next_list_item(&current_line_content) {
                                 e.insert_text(&next_item);
                             }
+                        },
+                        for Code::Tab => {
+                            // Tabキー押下時の処理を改修
+                            let current_line_idx = e.current_line;
+                            let current_line_content = e.get_line_content(current_line_idx);
+
+                            // 箇条書き行または数字付きリスト行判定
+                            let is_bullet_list = current_line_content.starts_with("-\u{00A0}");
+                            let is_num_list = is_numbered_list(&current_line_content);
+
+                            if is_bullet_list || is_num_list {
+                                // リスト行の場合はインデントを深くする
+                                // ここではpositionを+2するイメージで、行頭へ2つのノーブレークスペースを挿入
+                                // まずカーソルを行頭へ移動してから挿入する必要がある場合は、
+                                // それに対応したEditorStateの機能を使います。
+                                // ここでは簡易的にカーソルを前へ戻したり、
+                                // もしくは行頭まで戻してからスペースを挿入するなどの処理が必要となるかもしれません。
+                                // EditorStateのAPIに応じて調整してください。
+
+                                // 例: カーソルを先頭へ移動する場合(仮)
+                                // e.set_cursor(current_line_idx, 0);
+
+                                e.insert_char(char::from_u32(0x00A0).unwrap());
+                                e.insert_char(char::from_u32(0x00A0).unwrap());
+                            } else {
+                                // 通常の行の場合は既存処理（4つのノーブレークスペース挿入）
+                                for _ in 0..4 {
+                                    e.insert_char(char::from_u32(0x00A0).unwrap());
+                                }
+                            }
+                            let eval = document::eval("window.event.preventDefault();");
+                    eval.send(serde_json::Value::Null).unwrap();
                         }
                 ],
                 key => [
@@ -321,7 +327,7 @@ pub fn Editor() -> Element {
                                 id: "L{line_number}",
                                 "line": "{line_number}",
                                 onmousedown: handle_clicks,
-
+                            
                                 // view convert TEXT
                                 {
                                     rendered_line
@@ -526,7 +532,7 @@ fn markdown_view(line_content: &str) -> (Vec<(String, String)>, String) {
     (styled_lines, combined_style)
 }
 
-// リスト行を改行時に連続してリストを表示する関数
+/// リスト行を改行時に連続してリストを表示する関数
 fn next_list_item(line_content: &str) -> Option<String> {
     // 数字付きリスト判定: "1.\u{00A0}" のようなパターンがあれば次の番号を返す
     if let Some(idx) = line_content.find(".\u{00A0}") {
