@@ -1,4 +1,4 @@
-use components::editor::Editor;
+use components::{editor::Editor, home_editor::HomeEditor};
 use context::theme_context::ThemeProvider;
 use dioxus::prelude::*;
 
@@ -14,9 +14,9 @@ mod types;
 enum Route {
     // #[layout(Navbar)]
     #[route("/")]
-    Editor {},
-    #[route("/blog/:id")]
-    Blog { id: i32 },
+    Home {},
+    #[route("/memo/:id")]
+    Editor {id: i32},
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -63,40 +63,40 @@ pub fn Hero() -> Element {
 #[component]
 fn Home() -> Element {
     rsx! {
-        Hero {}
+        HomeEditor {}
     }
 }
 
 /// Blog page
-#[component]
-pub fn Blog(id: i32) -> Element {
-    rsx! {
-        div { id: "blog",
+// #[component]
+// pub fn Blog(id: i32) -> Element {
+//     rsx! {
+//         div { id: "blog",
 
-            // Content
-            h1 { "This is blog #{id}!" }
-            p {
-                "In blog #{id}, we show how the Dioxus router works and how URL parameters can be passed as props to our route components."
-            }
+//             // Content
+//             h1 { "This is blog #{id}!" }
+//             p {
+//                 "In blog #{id}, we show how the Dioxus router works and how URL parameters can be passed as props to our route components."
+//             }
 
-            // Navigation links
-            Link { to: Route::Blog { id: id - 1 }, "Previous" }
-            span { " <---> " }
-            Link { to: Route::Blog { id: id + 1 }, "Next" }
-        }
-    }
-}
+//             // Navigation links
+//             Link { to: Route::Blog { id: id - 1 }, "Previous" }
+//             span { " <---> " }
+//             Link { to: Route::Blog { id: id + 1 }, "Next" }
+//         }
+//     }
+// }
 
 /// Shared navbar component.
 #[component]
 fn Navbar() -> Element {
     rsx! {
         div { id: "navbar",
-            Link { to: Route::Editor {},
+            Link { to: Route::Home {},
                 {}
                 "Home"
             }
-            Link { to: Route::Blog { id: 1 }, "Blog" }
+            Link { to: Route::Editor { id: 1 }, "Blog" }
         }
 
         Outlet::<Route> {}

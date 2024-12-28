@@ -249,6 +249,22 @@ impl EditorState {
             Glyph::Component(Sample), // Sampleコンポーネントを追加
         );
     }
+
+    pub fn insert_ls(&mut self, file_list: &Vec<String>) {
+        let position = self.cursor_position;
+        self.cursor_position += 1;
+        let list_items = file_list
+            .iter()
+            .map(|file| format!("<li>{}</li>", file))
+            .collect::<Vec<String>>()
+            .join("");
+        let html = format!(r#"<ul>{}</ul>"#, list_items);
+        self.contents.insert(
+            self.current_line,
+            position,
+            Glyph::HTMLNode(format!(r#"<ul>{}</ul>"#, html)),
+        );
+    }
 }
 
 fn Sample() -> Element {

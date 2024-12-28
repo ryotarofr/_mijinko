@@ -3,6 +3,7 @@ use dioxus_router::navigation;
 use keyboard_types::{Code, Key, Modifiers};
 use regex::Regex;
 use serde_json::Value;
+use std::collections::HashMap;
 
 use crate::config::constants::LOREM_IPSUM;
 use crate::config::kana_map::KANA_MAP;
@@ -34,7 +35,7 @@ macro_rules! code_events {
 }
 
 #[component]
-pub fn Editor(id: i32) -> Element {
+pub fn HomeEditor() -> Element {
     // navigater
     let navigator = use_navigator();
 
@@ -59,6 +60,67 @@ pub fn Editor(id: i32) -> Element {
         grid-template-columns: minmax(40px,max-content) auto;
         grid-template_areas: "l c";
         "#;
+
+    // # ディレクトリ情報管理用変数
+    //
+    // DBからディレクトリ取得データ取得
+    //
+    // [Table]
+    //   trn_dir_info : 1階層目のディレクトリ情報
+    //
+    // [Column]
+    //   memo_id(PK) : 連番
+    //   dir_file_name : 1階層目ディレクトリ情報
+    //   insuser_id :
+    //   upduser_id :
+    //   insdate :
+    //   upddate :
+    //   # 以下必要なら追加
+    //   file_cnt: ディレクトリ内のファイル数(最大数の制限を決める時とかに必要)
+    //
+    //
+    // [Table]
+    //   trn_dir_file_tree : ディレクトリツリー情報
+    //
+    // [Column]
+    //   oya_memo_id :
+    //   memo_id :
+    //   dir_file_name :
+    //   insuser_id :
+    //   upduser_id :
+    //   insdate :
+    //   upddate :
+    //
+    // [Table](必要なら)
+    //   trn_interfase_dir_file_tree
+    //
+    // [Column]
+    //   oya_dir_file_name : 第一階層のディレクトリ名
+    //   dir_file_name :
+    //   insuser_id :
+    //   upduser_id :
+    //   insdate :
+    //   upddate :
+    //
+    // TODO: 変数名 allocate_dir_map に変更
+    //
+    // TODO: use_resource使う
+    // 拡張子いらないかな
+    let file_list = vec![HashMap::from([(1, "memo1")]), HashMap::from([(2, "memo2")])];
+
+    // lsコマンドで使う。HashMapをVecに変更
+    // ```rs
+    // println!("{:?}", converted); // ["memo1", "memo2"]
+    // ```
+    let converted: Vec<String> = file_list
+        .iter()
+        .flat_map(|map| map.values())
+        .map(|v| v.to_string())
+        .collect();
+
+    // pwd情報保持変数
+    // グローバル管理した方が良い？
+    let mut pwd_info = use_signal(|| "memo");
 
     let handle_composition_start = move |event: CompositionEvent| {
         let start_data = event.data().data();
@@ -162,59 +224,59 @@ pub fn Editor(id: i32) -> Element {
 
         // IME mode
         if *is_ime.read() {
-            if *is_ime.read() {
-                let current_code = event.code();
+            // if *is_ime.read() {
+            //     let current_code = event.code();
 
-                let mut keys = last_keys_vec.read().clone();
-                keys.push(current_code);
+            //     let mut keys = last_keys_vec.read().clone();
+            //     keys.push(current_code);
 
-                // 最大3キーまで試す(必要ならもっと増やしてもよい)
-                // lengthが長い順に試すことで、より長いコンボ優先
-                let mut matched = false;
-                for len in (1..=std::cmp::min(keys.len(), 3)).rev() {
-                    let slice = &keys[keys.len() - len..]; // 最後のlenキー
-                    if let Some(&kana) = KANA_MAP.get(slice) {
-                        // マッチした場合、文字挿入
-                        editor_state.with_mut(|e| e.insert_text(kana));
-                        // マッチしたキー分を削除
-                        for _ in 0..len {
-                            keys.pop();
-                        }
-                        matched = true;
-                        break;
-                    }
-                }
+            //     // 最大3キーまで試す(必要ならもっと増やしてもよい)
+            //     // lengthが長い順に試すことで、より長いコンボ優先
+            //     let mut matched = false;
+            //     for len in (1..=std::cmp::min(keys.len(), 3)).rev() {
+            //         let slice = &keys[keys.len() - len..]; // 最後のlenキー
+            //         if let Some(&kana) = KANA_MAP.get(slice) {
+            //             // マッチした場合、文字挿入
+            //             editor_state.with_mut(|e| e.insert_text(kana));
+            //             // マッチしたキー分を削除
+            //             for _ in 0..len {
+            //                 keys.pop();
+            //             }
+            //             matched = true;
+            //             break;
+            //         }
+            //     }
 
-                if !matched {
-                    // マッチしなかった場合は、キーシーケンスを保持して次のキー入力を待つ
-                    // 但し、あまりにもマッチしない場合はresetするロジックを入れても良い
-                }
+            //     if !matched {
+            //         // マッチしなかった場合は、キーシーケンスを保持して次のキー入力を待つ
+            //         // 但し、あまりにもマッチしない場合はresetするロジックを入れても良い
+            //     }
 
-                // 更新
-                last_keys_vec.set(keys);
-            }
-            code_events![
-                event, editor_state as e,
+            //     // 更新
+            //     last_keys_vec.set(keys);
+            // }
+            // code_events![
+            //     event, editor_state as e,
 
-                code => [
-                        for Code::F1 => e.insert_pill("F1"),
-                        for Code::F2 => e.insert_pill("F2"),
-                        for Code::F3 => e.insert_pill("F3"),
-                        for Code::F4 => e.insert_pill("F4"),
-                        for Code::Delete => e.delete(Direction::Forward),
-                        for Code::Backspace => e.delete(Direction::Backward),
-                        for Code::Space => {
-                            e.insert_char(char::from_u32(0x00A0).unwrap());
-                            let eval = document::eval("window.event.preventDefault();");
-                            eval.send(serde_json::Value::Null).unwrap();
-                        },
-                        for Code::ArrowUp => e.go_to_line(Direction::Backward),
-                        for Code::ArrowDown => e.go_to_line(Direction::Forward),
-                        for Code::ArrowRight => e.move_cursor(Direction::Forward),
-                        for Code::ArrowLeft => e.move_cursor(Direction::Backward),
-                        for Code::Enter => e.next_line_or_new()
-                ]
-            ];
+            //     code => [
+            //             for Code::F1 => e.insert_pill("F1"),
+            //             for Code::F2 => e.insert_pill("F2"),
+            //             for Code::F3 => e.insert_pill("F3"),
+            //             for Code::F4 => e.insert_pill("F4"),
+            //             for Code::Delete => e.delete(Direction::Forward),
+            //             for Code::Backspace => e.delete(Direction::Backward),
+            //             for Code::Space => {
+            //                 e.insert_char(char::from_u32(0x00A0).unwrap());
+            //                 let eval = document::eval("window.event.preventDefault();");
+            //                 eval.send(serde_json::Value::Null).unwrap();
+            //             },
+            //             for Code::ArrowUp => e.go_to_line(Direction::Backward),
+            //             for Code::ArrowDown => e.go_to_line(Direction::Forward),
+            //             for Code::ArrowRight => e.move_cursor(Direction::Forward),
+            //             for Code::ArrowLeft => e.move_cursor(Direction::Backward),
+            //             for Code::Enter => e.next_line_or_new()
+            //     ]
+            // ];
         } else {
             // unused IME
             code_events![
@@ -240,6 +302,61 @@ pub fn Editor(id: i32) -> Element {
                             // 改行前に現在行を確認
                             let current_line_idx = e.current_line;
                             let current_line_content = e.get_line_content(current_line_idx);
+
+                            // # コマンド関連
+                            //    - ls
+                            //    - pwd
+                            //    - cd
+                            //    - vim
+                            //    - mkdir
+                            //    - touch
+                            if current_line_content == "ls❮" {
+                              e.insert_ls(&converted);
+                            }
+                            if current_line_content == "pwd❮" {
+                              todo!()
+                            }
+                            if current_line_content == "cd❮" {
+                              todo!()
+                            }
+                            if current_line_content.starts_with("vim\u{00A0}"){
+                              // 1. "vim NBSP" を取り除く
+                              if let Some(stripped) = current_line_content.strip_prefix("vim\u{00A0}") {
+                                // 2. 残りの文字列の中から "❮" が見つかった位置を検索
+                                if let Some(idx) = stripped.find('❮') {
+                                    // 3. [先頭..idx] の部分が目的の文字列
+                                    let extracted = &stripped[..idx];
+                                    // println!("取得した文字列: {}", extracted);
+                                    // let file_list = vec![HashMap::from([(1, "memo1")]), HashMap::from([(2, "memo2")])];
+                                    // 2. パターン2: 最初に見つかった1つだけを取りたい場合
+                                    if let Some(found_key) = file_list
+                                      .iter()
+                                      .find_map(|hm| {
+                                          hm.iter()
+                                              .find_map(|(k, v)| if *v == extracted { Some(k) } else { None })
+                                      })
+                                    {
+                                        // println!("(first match) Found key = {}", found_key);
+                                        navigator.push(pwd_info.read().to_string() + "/" + &found_key.to_string());
+                                    } else {
+                                        // println!("No match found");
+                                        e.insert_text("No match found")
+
+                                    }
+                                    // navigator.push(pwd_info.read().to_string() + "/" + extracted);
+                                    // ここで extracted を使って何か処理を行う
+                                    // 例: 変数に保存したり、別の関数に渡すなど
+                                }
+                            }
+                              // let transformed_line = current_line_content.replacen("vim\u{00A0}", "", 1);
+                              // navigator.push(pwd_info.read().to_string());
+                            }
+                            if current_line_content == "mkdir\u{00A0}❮" {
+                              todo!()
+                            }
+                            if current_line_content == "touch\u{00A0}❮" {
+                              todo!()
+                            }
 
                             // 改行処理
                             e.next_line_or_new();
@@ -298,80 +415,80 @@ pub fn Editor(id: i32) -> Element {
         editor_state.with(|e| (e.current_line, e.cursor_position));
 
     rsx! {
-        div {
-            style: "{editor_style}",
-            tabindex: 0,
-            autofocus: true,
-            oncompositionstart: handle_composition_start,
-            oncompositionupdate: handle_composition_update,
-            oncompositionend: handle_composition_end,
-            onkeydown: handle_global_keys,
-            {
-                editor_state
-                    .read()
-                    .iter()
-                    .map(|(line_number, line)| {
-                        let current = current_line == line_number;
-                        let background = if current {
-                            "background-color: #f6f6f6;"
-                        } else {
-                            "background-color: white;"
-                        };
-                        let opacity = if current { "100%" } else { "20%" };
-                        let (rendered_line, line_style): (Vec<(String, String)>, String) = {
-                            let line_content = cursor_view(line, *is_ime.read());
-                            let (line_text, combined_style) = markdown_view(
-                                &line_content,
-                                &navigator,
-                            );
-                            (line_text, combined_style)
-                        };
-                        rsx! {
-                            div { style: "padding-right: 5px; text-align: right;",
-                                span { style: "opacity: {opacity};", "{line_number}" }
-                            }
-                            div {
-                                style: "{line_style} {background}",
-                                id: "L{line_number}",
-                                "line": "{line_number}",
-                                onmousedown: handle_clicks,
-                                // view convert TEXT
-                                {
-                                    rendered_line
-                                        .iter()
-                                        .map(|(text, style)| {
-                                            rsx! {
-                                                // TODO: fix
-                                                if text == "<Component>" {
-                                                    // Sampleコンポーネントを直接描画
-                                                    Sample {}
-                                                } else if text.contains("<") {
-                                                    // HTMLノードを描画
-                                                    span { dangerous_inner_html: "{text}" }
-                                                } else if text.contains(":\u{00A0}") {
-                                                    // 実装方針
-                                                    // ':' + '\u{00A0}'でAutocomplete表示
-                                                    // Autocomplete表示中はこれにフォーカスを優先
-                                                    // -> カーソルは常に1つを維持
-                                                    // 選択内容をクリック または enterで任意のコンポーネントを挿入
-                                                    // この部分で行う(できれば) -> insert_elementは不要になる想定
-                                                    // 2024/12/8 ん、やっぱりinsert_element使ったほうが綺麗な気がしてきた
-                                                    span { style: "{style}", "{text}" }
-                                                    Sample {}
-                                                } else {
-                                                    // 通常のテキストを描画
-                                                    // Sample {}
-                                                    span { style: "{style}", "{text}" }
-                                                }
-                                            }
-                                        })
-                                }
-                            }
+      div {
+        style: "{editor_style}",
+        tabindex: 0,
+        autofocus: true,
+        oncompositionstart: handle_composition_start,
+        oncompositionupdate: handle_composition_update,
+        oncompositionend: handle_composition_end,
+        onkeydown: handle_global_keys,
+        {
+            editor_state
+                .read()
+                .iter()
+                .map(|(line_number, line)| {
+                    let current = current_line == line_number;
+                    let background = if current {
+                        "background-color: #f6f6f6;"
+                    } else {
+                        "background-color: white;"
+                    };
+                    let opacity = if current { "100%" } else { "20%" };
+                    let (rendered_line, line_style): (Vec<(String, String)>, String) = {
+                        let line_content = cursor_view(line, *is_ime.read());
+                        let (line_text, combined_style) = markdown_view(
+                            &line_content,
+                            &navigator,
+                        );
+                        (line_text, combined_style)
+                    };
+                    rsx! {
+                      div { style: "padding-right: 5px; text-align: right;",
+                        span { style: "opacity: {opacity};", "{line_number}" }
+                      }
+                      div {
+                        style: "{line_style} {background}",
+                        id: "L{line_number}",
+                        "line": "{line_number}",
+                        onmousedown: handle_clicks,
+                        // view convert TEXT
+                        {
+                            rendered_line
+                                .iter()
+                                .map(|(text, style)| {
+                                    rsx! {
+                                      // TODO: fix
+                                      if text == "<Component>" {
+                                        // Sampleコンポーネントを直接描画
+                                        Sample {}
+                                      } else if text.contains("<") {
+                                        // HTMLノードを描画
+                                        span { dangerous_inner_html: "{text}" }
+                                      } else if text.contains(":") {
+                                        // 実装方針
+                                        // ':' + '\u{00A0}'でAutocomplete表示
+                                        // Autocomplete表示中はこれにフォーカスを優先
+                                        // -> カーソルは常に1つを維持
+                                        // 選択内容をクリック または enterで任意のコンポーネントを挿入
+                                        // この部分で行う(できれば) -> insert_elementは不要になる想定
+                                        // 2024/12/8 ん、やっぱりinsert_element使ったほうが綺麗な気がしてきた
+                                        span { style: "{style}", "{text}" }
+                                        Sample {}
+                                      } else {
+                                        // 通常のテキストを描画
+                                        // Sample {}
+                                        span { style: "{style}", "{text}" }
+                                      }
+                                    }
+                                })
                         }
-                    })
-            }
+                      }
+                    }
+                })
         }
-        div { "Line: {current_line} Position: {current_position}" }
+      }
+      div { "Line: {current_line} Position: {current_position}" }
     }
 }
 
@@ -379,9 +496,9 @@ fn Sample() -> Element {
     let mut count = use_signal(|| 0);
 
     rsx! {
-        h1 { "High-Five counter: {count}" }
-        button { onclick: move |_| count += 1, "Up high!" }
-        button { onclick: move |_| count -= 1, "Down low!" }
+      h1 { "High-Five counter: {count}" }
+      button { onclick: move |_| count += 1, "Up high!" }
+      button { onclick: move |_| count -= 1, "Down low!" }
     }
 }
 
@@ -521,17 +638,30 @@ fn markdown_view(line_content: &str, navigator: &Navigator) -> (Vec<(String, Str
         //     // この場合、combined_styleは変更しない
         // }
         // :
-        line if line.starts_with(":wq") => {
-            let transformed_line = line_content.replacen(":wq", "", 2);
-            push_styled_line(
-                &mut styled_lines,
-                &mut combined_style,
-                transformed_line,
-                "font-size: 30px; font-weight: bold;",
-                "font-size: 24px; margin-bottom: 4px; padding-left: 8px;",
-            );
-            navigator.push("/");
-        }
+        // line if line.starts_with(":wq") => {
+        //     let transformed_line = line_content.replacen(":wq", "", 2);
+        //     push_styled_line(
+        //         &mut styled_lines,
+        //         &mut combined_style,
+        //         transformed_line,
+        //         "font-size: 30px; font-weight: bold;",
+        //         "font-size: 24px; margin-bottom: 4px; padding-left: 8px;",
+        //     );
+        //     // navigator.push("/memo/1");
+        // }
+        // // ls
+        // line if line.starts_with("ls\u{2386}") => {
+        //     // TODO: enter押した時に実行
+
+        //     push_styled_line(
+        //         &mut styled_lines,
+        //         &mut combined_style,
+        //         line.to_string(),
+        //         "font-size: 30px; font-weight: bold;",
+        //         "font-size: 24px; margin-bottom: 4px; padding-left: 8px;",
+        //     );
+        //     // navigator.push("/memo/1");
+        // }
         // warn
         line if line.contains("WARNING") => {
             push_styled_line(
