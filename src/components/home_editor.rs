@@ -1,12 +1,10 @@
 use dioxus::prelude::*;
-use dioxus_router::navigation;
 use keyboard_types::{Code, Key, Modifiers};
 use regex::Regex;
 use serde_json::Value;
 use std::collections::HashMap;
 
 use crate::config::constants::LOREM_IPSUM;
-use crate::config::kana_map::KANA_MAP;
 use crate::context::theme_context::Theme;
 use crate::r#fn::editor_state::EditorState;
 use crate::r#fn::line::Line;
@@ -43,7 +41,7 @@ pub fn HomeEditor() -> Element {
     tracing::info!("editor_state :{:?}", editor_state.read());
     let mut theme = use_context::<Signal<Theme>>();
     let mut is_ime = use_signal(|| false);
-    let mut last_keys_vec: Signal<Vec<Code>> = use_signal(|| Vec::new());
+    // let mut last_keys_vec: Signal<Vec<Code>> = use_signal(|| Vec::new());
 
     let mut ime_buffer = use_signal(String::new); // IMEの入力を一時的に保持するバッファ
 

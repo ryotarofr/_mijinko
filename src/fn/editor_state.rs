@@ -232,8 +232,8 @@ impl EditorState {
             self.current_line,
             position,
             Glyph::HTMLNode(format!(r#"
-<button style="appearance: none; border: none; background: none; padding: 0; margin: 0; font: inherit; border-radius: 4px; background-color: #7f00ff; color: #fff; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; padding: 6px 12px; font-size: 12px; line-height: 1.5; cursor: pointer; transition: background-color 0.2s ease-in-out;" onmouseover="this.style.backgroundColor='#5f00cc'" onmouseout="this.style.backgroundColor='#7f00ff'">{text}</button>
-"#))
+                <button style="appearance: none; border: none; background: none; padding: 0; margin: 0; font: inherit; border-radius: 4px; background-color: #7f00ff; color: #fff; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; padding: 6px 12px; font-size: 12px; line-height: 1.5; cursor: pointer; transition: background-color 0.2s ease-in-out;" onmouseover="this.style.backgroundColor='#5f00cc'" onmouseout="this.style.backgroundColor='#7f00ff'">{text}</button>
+            "#))
         );
     }
 

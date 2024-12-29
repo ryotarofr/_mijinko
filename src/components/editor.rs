@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use dioxus_router::navigation;
 use keyboard_types::{Code, Key, Modifiers};
 use regex::Regex;
 use serde_json::Value;
@@ -39,9 +38,11 @@ pub fn Editor(id: i32) -> Element {
     let navigator = use_navigator();
 
     let mut editor_state = use_signal(|| EditorState::from(LOREM_IPSUM));
-    tracing::info!("editor_state :{:?}", editor_state.read());
+    // tracing::info!("editor_state :{:?}", editor_state.read());
     let mut theme = use_context::<Signal<Theme>>();
     let mut is_ime = use_signal(|| false);
+
+    // これいらない説
     let mut last_keys_vec: Signal<Vec<Code>> = use_signal(|| Vec::new());
 
     let mut ime_buffer = use_signal(String::new); // IMEの入力を一時的に保持するバッファ
