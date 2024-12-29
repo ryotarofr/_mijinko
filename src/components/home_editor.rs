@@ -4,6 +4,7 @@ use regex::Regex;
 use serde_json::Value;
 use std::collections::HashMap;
 
+use crate::components::editor_plugin::{cursor_view::cursorView, next_list_item::nextListItem};
 use crate::config::constants::LOREM_IPSUM;
 use crate::context::theme_context::Theme;
 use crate::r#fn::editor_state::EditorState;
@@ -256,7 +257,7 @@ pub fn HomeEditor() -> Element {
                             e.next_line_or_new();
 
                             // 改行時に前の行がリストなら、次の行もリストを挿入
-                            if let Some(next_item) = next_list_item(&current_line_content) {
+                            if let Some(next_item) = nextListItem(&current_line_content) {
                                 e.insert_text(&next_item);
                             }
                         },
@@ -330,11 +331,8 @@ pub fn HomeEditor() -> Element {
                     };
                     let opacity = if current { "100%" } else { "20%" };
                     let (rendered_line, line_style): (Vec<(String, String)>, String) = {
-                        let line_content = cursor_view(line, *is_ime.read());
-                        let (line_text, combined_style) = markdown_view(
-                            &line_content,
-                            &navigator,
-                        );
+                        let line_content = cursorView(line, *is_ime.read());
+                        let (line_text, combined_style) = markdown_view(&line_content);
                         (line_text, combined_style)
                     };
                     rsx! {
@@ -359,16 +357,6 @@ pub fn HomeEditor() -> Element {
                                       } else if text.contains("<") {
                                         // HTMLノードを描画
                                         span { dangerous_inner_html: "{text}" }
-                                      } else if text.contains(":") {
-                                        // 実装方針
-                                        // ':' + '\u{00A0}'でAutocomplete表示
-                                        // Autocomplete表示中はこれにフォーカスを優先
-                                        // -> カーソルは常に1つを維持
-                                        // 選択内容をクリック または enterで任意のコンポーネントを挿入
-                                        // この部分で行う(できれば) -> insert_elementは不要になる想定
-                                        // 2024/12/8 ん、やっぱりinsert_element使ったほうが綺麗な気がしてきた
-                                        span { style: "{style}", "{text}" }
-                                        Sample {}
                                       } else {
                                         // 通常のテキストを描画
                                         // Sample {}
@@ -396,26 +384,9 @@ fn Sample() -> Element {
     }
 }
 
-fn cursor_view(line: &Line, is_ime: bool) -> String {
-    line.as_vec()
-        .iter()
-        .map(|glyph| match glyph {
-            Glyph::Text(text) => text.clone(),
-            Glyph::Char(c) => c.to_string(),
-            Glyph::Cursor => {
-                if is_ime {
-                    "❮:IME".to_string()
-                } else {
-                    "❮".to_string()
-                }
-            }
-            Glyph::HTMLNode(value) => value.clone(),
-            Glyph::Component(_) => "<Component>".to_string(),
-        })
-        .collect()
-}
-
-fn markdown_view(line_content: &str, navigator: &Navigator) -> (Vec<(String, String)>, String) {
+// TODO : home_editorでマークダウン使わないのでいらない
+// markdown_viewを使っている部分を修正が必要なのでとりあえず残す
+fn markdown_view(line_content: &str) -> (Vec<(String, String)>, String) {
     let mut styled_lines = Vec::new();
     let mut combined_style = String::new();
 
@@ -540,24 +511,4 @@ fn markdown_view(line_content: &str, navigator: &Navigator) -> (Vec<(String, Str
     }
 
     (styled_lines, combined_style)
-}
-
-/// リスト行を改行時に連続してリストを表示する関数
-fn next_list_item(line_content: &str) -> Option<String> {
-    // 数字付きリスト判定: "1.\u{00A0}" のようなパターンがあれば次の番号を返す
-    if let Some(idx) = line_content.find(".\u{00A0}") {
-        // idx以前が数字なら次の数値を生成
-        let number_str = &line_content[..idx];
-        if let Ok(num) = number_str.parse::<usize>() {
-            return Some(format!("{}.\u{00A0}", num + 1));
-        }
-    }
-
-    // 箇条書きリスト判定: "-\u{00A0}" を含んでいれば同じ記号を返す
-    if line_content.contains("-\u{00A0}") {
-        return Some("-\u{00A0}".to_string());
-    }
-
-    // どちらにも該当しなければNone
-    None
 }
