@@ -2771,6 +2771,8 @@ dependencies = [
  "getrandom 0.2.15",
  "keyboard-types",
  "once_cell",
+ "parking_lot",
+ "regex",
  "serde_json",
  "tokio",
  "tracing",
