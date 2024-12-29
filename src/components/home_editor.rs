@@ -65,43 +65,6 @@ pub fn HomeEditor() -> Element {
     //
     // DBからディレクトリ取得データ取得
     //
-    // [Table]
-    //   trn_dir_info : 1階層目のディレクトリ情報
-    //
-    // [Column]
-    //   memo_id(PK) : 連番
-    //   dir_file_name : 1階層目ディレクトリ情報
-    //   insuser_id :
-    //   upduser_id :
-    //   insdate :
-    //   upddate :
-    //   # 以下必要なら追加
-    //   file_cnt: ディレクトリ内のファイル数(最大数の制限を決める時とかに必要)
-    //
-    //
-    // [Table]
-    //   trn_dir_file_tree : ディレクトリツリー情報
-    //
-    // [Column]
-    //   oya_memo_id :
-    //   memo_id :
-    //   dir_file_name :
-    //   insuser_id :
-    //   upduser_id :
-    //   insdate :
-    //   upddate :
-    //
-    // [Table](必要なら)
-    //   trn_interfase_dir_file_tree
-    //
-    // [Column]
-    //   oya_dir_file_name : 第一階層のディレクトリ名
-    //   dir_file_name :
-    //   insuser_id :
-    //   upduser_id :
-    //   insdate :
-    //   upddate :
-    //
     // TODO: 変数名 allocate_dir_map に変更
     //
     // TODO: use_resource使う
