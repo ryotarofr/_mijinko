@@ -250,19 +250,32 @@ impl EditorState {
         );
     }
 
-    pub fn insert_ls(&mut self, file_list: &Vec<String>) {
+    pub fn insert_ls(&mut self, file_list: &[String]) {
         let position = self.cursor_position;
         self.cursor_position += 1;
         let list_items = file_list
             .iter()
-            .map(|file| format!("<li>{}</li>", file))
+            .map(|file| format!("<span>{} / </span>", file))
             .collect::<Vec<String>>()
             .join("");
-        let html = format!(r#"<ul>{}</ul>"#, list_items);
         self.contents.insert(
             self.current_line,
             position,
-            Glyph::HTMLNode(format!(r#"<ul>{}</ul>"#, html)),
+            Glyph::HTMLNode(format!(r#"<div>{}</div>"#, list_items)),
+        );
+    }
+
+    pub fn insert_vim(&mut self, file_name: &str, message: &str) {
+        let position = self.cursor_position;
+        self.cursor_position += 1;
+        self.contents.insert(
+            self.current_line,
+            position,
+            Glyph::HTMLNode(format!(
+                r#"
+                <div><span style="font-weight: bold;">{file_name}</span>{message}</div>
+                "#
+            )),
         );
     }
 }

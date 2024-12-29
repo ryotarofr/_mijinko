@@ -224,59 +224,7 @@ pub fn HomeEditor() -> Element {
 
         // IME mode
         if *is_ime.read() {
-            // if *is_ime.read() {
-            //     let current_code = event.code();
-
-            //     let mut keys = last_keys_vec.read().clone();
-            //     keys.push(current_code);
-
-            //     // 最大3キーまで試す(必要ならもっと増やしてもよい)
-            //     // lengthが長い順に試すことで、より長いコンボ優先
-            //     let mut matched = false;
-            //     for len in (1..=std::cmp::min(keys.len(), 3)).rev() {
-            //         let slice = &keys[keys.len() - len..]; // 最後のlenキー
-            //         if let Some(&kana) = KANA_MAP.get(slice) {
-            //             // マッチした場合、文字挿入
-            //             editor_state.with_mut(|e| e.insert_text(kana));
-            //             // マッチしたキー分を削除
-            //             for _ in 0..len {
-            //                 keys.pop();
-            //             }
-            //             matched = true;
-            //             break;
-            //         }
-            //     }
-
-            //     if !matched {
-            //         // マッチしなかった場合は、キーシーケンスを保持して次のキー入力を待つ
-            //         // 但し、あまりにもマッチしない場合はresetするロジックを入れても良い
-            //     }
-
-            //     // 更新
-            //     last_keys_vec.set(keys);
-            // }
-            // code_events![
-            //     event, editor_state as e,
-
-            //     code => [
-            //             for Code::F1 => e.insert_pill("F1"),
-            //             for Code::F2 => e.insert_pill("F2"),
-            //             for Code::F3 => e.insert_pill("F3"),
-            //             for Code::F4 => e.insert_pill("F4"),
-            //             for Code::Delete => e.delete(Direction::Forward),
-            //             for Code::Backspace => e.delete(Direction::Backward),
-            //             for Code::Space => {
-            //                 e.insert_char(char::from_u32(0x00A0).unwrap());
-            //                 let eval = document::eval("window.event.preventDefault();");
-            //                 eval.send(serde_json::Value::Null).unwrap();
-            //             },
-            //             for Code::ArrowUp => e.go_to_line(Direction::Backward),
-            //             for Code::ArrowDown => e.go_to_line(Direction::Forward),
-            //             for Code::ArrowRight => e.move_cursor(Direction::Forward),
-            //             for Code::ArrowLeft => e.move_cursor(Direction::Backward),
-            //             for Code::Enter => e.next_line_or_new()
-            //     ]
-            // ];
+            // IME使わない想定
         } else {
             // unused IME
             code_events![
@@ -319,38 +267,23 @@ pub fn HomeEditor() -> Element {
                             if current_line_content == "cd❮" {
                               todo!()
                             }
-                            if current_line_content.starts_with("vim\u{00A0}"){
-                              // 1. "vim NBSP" を取り除く
+                            if current_line_content.starts_with("vim\u{00A0}") {
                               if let Some(stripped) = current_line_content.strip_prefix("vim\u{00A0}") {
-                                // 2. 残りの文字列の中から "❮" が見つかった位置を検索
                                 if let Some(idx) = stripped.find('❮') {
-                                    // 3. [先頭..idx] の部分が目的の文字列
+                                  // 'vim\u{00A0}'から'❮' シンボルまでの文字抽出
                                     let extracted = &stripped[..idx];
-                                    // println!("取得した文字列: {}", extracted);
-                                    // let file_list = vec![HashMap::from([(1, "memo1")]), HashMap::from([(2, "memo2")])];
-                                    // 2. パターン2: 最初に見つかった1つだけを取りたい場合
-                                    if let Some(found_key) = file_list
-                                      .iter()
-                                      .find_map(|hm| {
-                                          hm.iter()
-                                              .find_map(|(k, v)| if *v == extracted { Some(k) } else { None })
-                                      })
-                                    {
-                                        // println!("(first match) Found key = {}", found_key);
-                                        navigator.push(pwd_info.read().to_string() + "/" + &found_key.to_string());
-                                    } else {
-                                        // println!("No match found");
-                                        e.insert_text("No match found")
 
+                                    if let Some(found_key) = file_list.iter().find_map(|hm| {
+                                        hm.iter()
+                                            .find_map(|(k, v)| if *v == extracted { Some(k) } else { None })
+                                    }) {
+                                        navigator.push(format!("{}/{}", pwd_info.read(), found_key));
+                                    } else {
+                                      e.insert_vim(extracted ," is no match found");
                                     }
-                                    // navigator.push(pwd_info.read().to_string() + "/" + extracted);
-                                    // ここで extracted を使って何か処理を行う
-                                    // 例: 変数に保存したり、別の関数に渡すなど
                                 }
-                            }
-                              // let transformed_line = current_line_content.replacen("vim\u{00A0}", "", 1);
-                              // navigator.push(pwd_info.read().to_string());
-                            }
+                              }
+                          }
                             if current_line_content == "mkdir\u{00A0}❮" {
                               todo!()
                             }
@@ -629,39 +562,6 @@ fn markdown_view(line_content: &str, navigator: &Navigator) -> (Vec<(String, Str
                 &list_container_style,
             )
         }
-        // codeblock
-        // line if line.starts_with(":") => {
-        //     let transformed_line = line_content.replacen("```\u{00A0}", "", 1);
-        //     let html_node = r#"<input style=""></input>"#;
-        //     styled_lines.push((html_node.to_string(), "".to_string()));
-        //     styled_lines.push((transformed_line, "".to_string()));
-        //     // この場合、combined_styleは変更しない
-        // }
-        // :
-        // line if line.starts_with(":wq") => {
-        //     let transformed_line = line_content.replacen(":wq", "", 2);
-        //     push_styled_line(
-        //         &mut styled_lines,
-        //         &mut combined_style,
-        //         transformed_line,
-        //         "font-size: 30px; font-weight: bold;",
-        //         "font-size: 24px; margin-bottom: 4px; padding-left: 8px;",
-        //     );
-        //     // navigator.push("/memo/1");
-        // }
-        // // ls
-        // line if line.starts_with("ls\u{2386}") => {
-        //     // TODO: enter押した時に実行
-
-        //     push_styled_line(
-        //         &mut styled_lines,
-        //         &mut combined_style,
-        //         line.to_string(),
-        //         "font-size: 30px; font-weight: bold;",
-        //         "font-size: 24px; margin-bottom: 4px; padding-left: 8px;",
-        //     );
-        //     // navigator.push("/memo/1");
-        // }
         // warn
         line if line.contains("WARNING") => {
             push_styled_line(
