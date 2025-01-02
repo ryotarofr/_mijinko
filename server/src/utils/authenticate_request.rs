@@ -1,17 +1,19 @@
+/// #[async_trait] is no longer needed.
+/// Axum0.8: https://github.com/tokio-rs/axum/blob/e0b55d750390d810028caad0387058751611c1b4/axum-core/CHANGELOG.md?plain=1#L25
 use crate::errors::AuthenticateError;
 use crate::errors::Error;
 use crate::settings::SETTINGS;
 use crate::utils::token;
 use crate::utils::token::TokenUser;
 
-use axum::{async_trait, extract::FromRequestParts, http::request::Parts, RequestPartsExt};
+use axum::{extract::FromRequestParts, http::request::Parts, RequestPartsExt};
 
 use axum_extra::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
 
-#[async_trait]
+// #[async_trait]
 impl<S> FromRequestParts<S> for TokenUser
 where
     S: Send + Sync,
