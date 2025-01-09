@@ -100,7 +100,8 @@ pub fn HomeEditor() -> Element {
 
     #[derive(Serialize, Deserialize, Debug)]
     struct Memo {
-        oya_memo_id: Option<i32>,
+        user_id: i32,
+        // oya_memo_id: Option<i32>,
         memo_id: i32,
         lines: Vec<Line>,
     }
@@ -116,7 +117,8 @@ pub fn HomeEditor() -> Element {
     //
     //
     let dioxus_editor_data = Memo {
-        oya_memo_id: None, // Noneの場合はこのファイルはトップレベルになる
+        user_id: 12345,
+        // oya_memo_id: None, // Noneの場合はこのファイルはトップレベルになる
         memo_id: 1,
         lines: vec![
             Line {
