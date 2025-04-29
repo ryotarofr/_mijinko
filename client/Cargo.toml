@@ -20,6 +20,7 @@ tracing = "0.1.41"
 regex = "1.11.1"
 parking_lot = "0.12.3"
 serde = "1.0.217"
+markdown = "1.0.0"
 
 
 [features]
