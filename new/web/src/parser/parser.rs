@@ -2,15 +2,8 @@
 /// 入力情報の接頭辞から html を追加するだけの実装
 ///
 /// ブロックインクリメントにする
-#[derive(Debug)]
-struct Looker {
-    /// true なら先読みが必要
-    lookahead: bool,
-    // 再帰的に更新をする関数。複数行の削除とか複数行のペーストで使うはず。
-    // child: to(Looker) -> Looker,
-}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LineType {
     /// 空の行などで使う
     Cursor = 0,
@@ -20,7 +13,22 @@ pub enum LineType {
     // add todo ...
 }
 
-#[derive(Debug)]
+impl LineType {
+    /// 文字列先頭で判定
+    pub fn detect(s: &str) -> Self {
+        if s.is_empty() {
+            LineType::Cursor
+        } else if s.starts_with("```") {
+            LineType::Code
+        } else if s.starts_with('#') {
+            LineType::Hedding
+        } else {
+            LineType::Paragraph
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct State {
     /// 入力テキスト
     pub input: String,
@@ -33,26 +41,45 @@ pub struct State {
     /// 現在の列
     pos: usize,
     /// TODO(後から実装): 先読み関連 , default: false,
-    lookahead: Looker,
+    /// 今は input に \n があれば true になる想定だが、もっと複雑な条件になった時に直接値指定できるようにするためのもの
+    lookahead: bool,
     // lookahead が true なら処理を実行する関数型
     // child: fn(Looker) -> Looker,
-    child: Vec<State>,
+    pub child: Option<Box<State>>,
 }
 
 impl State {
-    pub fn new(input: &str) -> Self {
-        State {
-            input: input.to_string(),
-            line_type: State::get_line_type(input),
-            offset: 0,
-            pos: 0,
-            lookahead: Looker { lookahead: false },
-            child: Vec::new(),
+    pub fn parse(input: &str) -> Self {
+        let mut lines = input.split('\n');
+        // ── 1行目
+        let first = lines.next().unwrap_or("");
+        let mut root = State::new_node(first, 0);
+
+        // ── 2行目以降をループで child にリンク
+        let mut cursor = &mut root;
+        let mut offset = first.len() + 1; // 次行開始オフセット
+        for line in lines {
+            let mut node: State = State::new_node(line, offset);
+            offset += line.len() + 1;
+
+            cursor.child = Some(Box::new(node));
+            // 直下の child を次の cursor に
+            cursor = cursor.child.as_mut().unwrap();
         }
+
+        root
     }
 
-    fn add_child(&mut self, child: State) {
-        self.child.push(child);
+    fn new_node(text: &str, offset: usize) -> Self {
+        State {
+            input: text.to_string(),
+            line_type: LineType::detect(text),
+            offset,
+            pos: 0,
+            lookahead: text.contains('\n'),
+            // parse 側で次行の有無を見てください
+            child: None,
+        }
     }
 
     pub fn insert(&mut self, pos: usize, text: &str) {
