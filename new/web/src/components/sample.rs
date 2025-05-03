@@ -6,13 +6,13 @@ fn render_state(state: &State) -> Element {
     // 現在のラインを構築
     let this_line = match state.line_type {
         LineType::Cursor | LineType::Paragraph => rsx! {
-            p { {state.input.as_str()} }
+            p { {state.input} }
         },
         LineType::Hedding => rsx! {
-            h2 { {state.input.as_str()} }
+            h2 { {state.input} }
         },
         LineType::Code => rsx! {
-            pre { code { {state.input.as_str()} } }
+            pre { code { {state.input} } }
         },
     };
 
@@ -31,6 +31,8 @@ fn render_state(state: &State) -> Element {
 
 #[component]
 pub fn Sample() -> Element {
+    let input = use_signal(|| "");
+
     let parser = State::parse("# 0\n## 1\n### 2\n 3\n");
     let insert_element = render_state(&parser);
 

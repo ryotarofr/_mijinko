@@ -1,3 +1,5 @@
+/// 参考
+/// https://github.com/biomejs/biome/blob/main/crates/biome_markdown_parser/src/syntax/thematic_break_block.rs
 /// 構造について
 /// 入力情報の接頭辞から html を追加するだけの実装
 ///
@@ -29,9 +31,9 @@ impl LineType {
 }
 
 #[derive(Debug, Clone)]
-pub struct State {
+pub struct State<'text> {
     /// 入力テキスト
-    pub input: String,
+    pub input: &'text str,
     /// 行の形式判定用 default: 0, 特定され次第即座に挿入される値
     pub line_type: LineType,
     /// 行番号。
@@ -45,21 +47,21 @@ pub struct State {
     lookahead: bool,
     // lookahead が true なら処理を実行する関数型
     // child: fn(Looker) -> Looker,
-    pub child: Option<Box<State>>,
+    pub child: Option<Box<State<'text>>>,
 }
 
-impl State {
-    pub fn parse(input: &str) -> Self {
+impl<'text> State<'text> {
+    pub fn parse(input: &'text str) -> Self {
         let mut lines = input.split('\n');
         // ── 1行目
         let first = lines.next().unwrap_or("");
-        let mut root = State::new_node(first, 0);
+        let mut root = State::new(first, 0);
 
         // ── 2行目以降をループで child にリンク
         let mut cursor = &mut root;
         let mut offset = first.len() + 1; // 次行開始オフセット
         for line in lines {
-            let mut node: State = State::new_node(line, offset);
+            let mut node: State = State::new(line, offset);
             offset += line.len() + 1;
 
             cursor.child = Some(Box::new(node));
@@ -70,9 +72,9 @@ impl State {
         root
     }
 
-    fn new_node(text: &str, offset: usize) -> Self {
-        State {
-            input: text.to_string(),
+    fn new(text: &'text str, offset: usize) -> Self {
+        Self {
+            input: text,
             line_type: LineType::detect(text),
             offset,
             pos: 0,
@@ -82,23 +84,23 @@ impl State {
         }
     }
 
-    pub fn insert(&mut self, pos: usize, text: &str) {
-        self.input.insert_str(pos, text);
-        self.offset += text.len();
-        // 挿入後にline_typeを再判定したい場合
-        self.line_type = State::get_line_type(&self.input);
-    }
+    // pub fn insert(&mut self, pos: usize, text: &'text str) {
+    //     self.input.insert_str(pos, text);
+    //     self.offset += text.len();
+    //     // 挿入後にline_typeを再判定したい場合
+    //     self.line_type = State::get_line_type(&self.input);
+    // }
 
-    /// 指定位置から指定長さを削除
-    pub fn delete(&mut self, pos: usize, len: usize) {
-        let end = pos + len;
-        if end <= self.input.len() {
-            self.input.replace_range(pos..end, "");
-            self.offset = self.offset.saturating_sub(len);
-            // 削除後にline_typeを再判定したい場合
-            self.line_type = State::get_line_type(&self.input);
-        }
-    }
+    // /// 指定位置から指定長さを削除
+    // pub fn delete(&mut self, pos: usize, len: usize) {
+    //     let end = pos + len;
+    //     if end <= self.input.len() {
+    //         self.input.replace_range(pos..end, "");
+    //         self.offset = self.offset.saturating_sub(len);
+    //         // 削除後にline_typeを再判定したい場合
+    //         self.line_type = State::get_line_type(&self.input);
+    //     }
+    // }
 
     /// line_type の判定を行う
     fn get_line_type(input: &str) -> LineType {
