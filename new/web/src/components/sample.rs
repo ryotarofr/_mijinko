@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
 
-use crate::parser::parser::{LineType, State};
+use crate::parser::parser::{split_lines, LineType, State};
 
+/// State の構造体を html に変換する
 fn render_state(state: &State) -> Element {
-    // 現在のラインを構築
-    let this_line = match state.line_type {
+    match state.line_type {
         LineType::Cursor | LineType::Paragraph => rsx! {
             p { {state.input} }
         },
@@ -14,27 +14,16 @@ fn render_state(state: &State) -> Element {
         LineType::Code => rsx! {
             pre { code { {state.input} } }
         },
-    };
-
-    // ── child があれば再帰的に下に連結
-    if let Some(child) = &state.child {
-        rsx! {
-            div{
-                { this_line }
-                { render_state(child) }
-            }
-        }
-    } else {
-        this_line
     }
 }
 
 #[component]
 pub fn Sample() -> Element {
-    let input = use_signal(|| "");
-
-    let parser = State::parse("# 0\n## 1\n### 2\n 3\n");
-    let insert_element = render_state(&parser);
+    let input = use_signal(|| "# 0\n## 1\n### 2\n 3\n");
+    let insert_element = split_lines(*input.read()).into_iter().map(|line| {
+        let state = State::from(line);
+        render_state(&state)
+    });
 
     rsx! {
         div {
