@@ -34,21 +34,22 @@ impl LineType {
 }
 
 #[derive(Debug, Clone)]
-pub struct LineState<'text> {
+pub struct LineState {
     /// 入力テキスト
     /// 構造体内部でデータの変更はできない(暗黙の更新を排除したほうがクリーンなコードになる)
-    pub input: &'text str,
+    pub input: String,
     /// 行の形式判定用 default: 0, 特定され次第即座に挿入される値
     pub line_type: LineType,
     // 履歴管理用(lexicalでやっているノードに紐づく値)
     // pub history: usize,
 }
 
-impl<'text> From<&'text str> for LineState<'text> {
-    fn from(text: &'text str) -> Self {
+impl From<String> for LineState {
+    fn from(text: String) -> Self {
+        let line_type = LineType::detect(&text);
         Self {
             input: text,
-            line_type: LineType::detect(text),
+            line_type,
         }
     }
 }
@@ -62,12 +63,12 @@ impl<'text> From<&'text str> for LineState<'text> {
 
 // 世代管理用の構造体
 #[derive(Debug)]
-pub struct LocalLineHistory<'a> {
-    pub generations: HashMap<usize, LineState<'a>>,
+pub struct LocalLineHistory {
+    pub generations: HashMap<usize, LineState>,
     pub current: usize,
 }
 
-impl<'a> LocalLineHistory<'a> {
+impl LocalLineHistory {
     pub fn default() -> Self {
         Self {
             generations: HashMap::new(),
@@ -75,12 +76,12 @@ impl<'a> LocalLineHistory<'a> {
         }
     }
 
-    pub fn insert(&mut self, state: LineState<'a>) {
+    pub fn insert(&mut self, state: LineState) {
         self.current += 1;
         self.generations.insert(self.current, state);
     }
 
-    pub fn get(&self, gen: usize) -> Option<&LineState<'a>> {
+    pub fn get(&self, gen: usize) -> Option<&LineState> {
         self.generations.get(&gen)
     }
 }

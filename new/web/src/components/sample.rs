@@ -1,4 +1,4 @@
-use dioxus::{history, prelude::*};
+use dioxus::prelude::*;
 
 use crate::parser::parser::{LineState, LineType, LocalLineHistory};
 use crate::parser::utils::split_lines;
@@ -7,37 +7,46 @@ use crate::parser::utils::split_lines;
 fn render_state(state: &LineState) -> Element {
     match state.line_type {
         LineType::Cursor | LineType::Paragraph => rsx! {
-            p { {state.input} }
+            p { {state.input.as_str()} }
         },
         LineType::Hedding => rsx! {
-            h2 { {state.input} }
+            h2 { {state.input.as_str()} }
         },
         LineType::Code => rsx! {
-            pre { code { {state.input} } }
+            pre { code { {state.input.as_str()} } }
         },
         LineType::Quote => rsx! {
-            blockquote { {state.input} }
+            blockquote { {state.input.as_str()} }
         },
     }
 }
 
 #[component]
 pub fn Sample() -> Element {
-    let input = use_signal(|| "# h1\n## h2\n### h3\n paraglaph\n> hello\n");
+    let mut input = use_signal(|| "# h1\n## h2\n### h3\n paraglaph\n> hello\n".to_string());
     let mut history = use_signal(LocalLineHistory::default);
 
-    let insert_element = split_lines(*input.read()).into_iter().map(|line| {
-        let state = LineState::from(line);
-        history.write().insert(state.clone());
+    let insert_elements = split_lines(input.read().to_string())
+        .into_iter()
+        .map(|line| {
+            let state = LineState::from(line.clone());
+            history.write().insert(state.clone());
 
-        render_state(&state)
-    });
+            render_state(&state)
+        });
 
     rsx! {
         div {
-            h1 { "Sample" }
             div {
-                {insert_element}
+                contenteditable: "true",
+                oninput: move |e| {
+                    input.set(e.value());
+                },
+            }
+            input {
+            }
+            div {
+                {insert_elements}
             }
             div {
                 p { "History" }
