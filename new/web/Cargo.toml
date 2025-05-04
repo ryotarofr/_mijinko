@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 dioxus = { workspace = true, features = [] }
+keyboard-types = "0.8.0"
 ui = { workspace = true }
 
 [features]

@@ -1172,7 +1172,7 @@ dependencies = [
  "euclid",
  "futures-channel",
  "generational-box",
- "keyboard-types",
+ "keyboard-types 0.7.0",
  "lazy-js-bundle",
  "rustversion",
  "serde",
@@ -2053,7 +2053,7 @@ dependencies = [
  "bitflags 2.9.0",
  "cocoa 0.25.0",
  "crossbeam-channel",
- "keyboard-types",
+ "keyboard-types 0.7.0",
  "objc",
  "once_cell",
  "thiserror 1.0.69",
@@ -2647,6 +2647,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "keyboard-types"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd6e0f18953c66af118a70064505bd3780a226d65b06553b7293fb8933067967"
+dependencies = [
+ "bitflags 2.9.0",
+ "serde",
+]
+
+[[package]]
 name = "kuchikiki"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2935,7 +2945,7 @@ dependencies = [
  "cocoa 0.25.0",
  "crossbeam-channel",
  "gtk",
- "keyboard-types",
+ "keyboard-types 0.7.0",
  "libxdo",
  "objc",
  "once_cell",
@@ -2953,7 +2963,7 @@ dependencies = [
  "crossbeam-channel",
  "dpi",
  "gtk",
- "keyboard-types",
+ "keyboard-types 0.7.0",
  "libxdo",
  "objc2 0.5.2",
  "objc2-app-kit 0.2.2",
@@ -5220,6 +5230,7 @@ name = "web"
 version = "0.1.0"
 dependencies = [
  "dioxus",
+ "keyboard-types 0.8.0",
  "ui",
 ]
 
