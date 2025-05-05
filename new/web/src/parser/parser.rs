@@ -61,14 +61,16 @@ impl From<String> for LineState {
 // これを作る場合に、 はじめ、HashMap で設定していたけどやっぱり BTreeMap にしたいなーってなったときに
 // 相互変換できるような実装が必要。
 
-// 世代管理用の構造体
+/// 世代管理用の構造体
+/// ローカル履歴のみを管理
+/// 初期表示で過去のデータがあったとしても 0 で初期化される
 #[derive(Debug)]
-pub struct LocalLineHistory {
+pub struct _LocalLineHistory {
     pub generations: HashMap<usize, LineState>,
     pub current: usize,
 }
 
-impl LocalLineHistory {
+impl _LocalLineHistory {
     pub fn default() -> Self {
         Self {
             generations: HashMap::new(),
