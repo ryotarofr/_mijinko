@@ -1,8 +1,12 @@
+use dioxus::prelude::Element as DioxusElement;
+use dioxus::prelude::*;
 /// 参考
 /// https://github.com/biomejs/biome/blob/main/crates/biome_markdown_parser/src/syntax/thematic_break_block.rs
 /// 構造について
 /// 入力情報の接頭辞から html を追加するだけの実装
 use std::collections::HashMap;
+use web_sys::window;
+use web_sys::Element as WebSysElement;
 
 /// ブロックインクリメントにする
 #[derive(Debug, Clone)]
@@ -16,9 +20,10 @@ pub enum LineType {
     // add todo ...
 }
 
-impl LineType {
+impl From<&str> for LineType {
     /// 文字列先頭で判定
-    pub fn detect(s: &str) -> Self {
+    /// 一旦 replace はしない
+    fn from(s: &str) -> Self {
         if s.is_empty() {
             LineType::Cursor
         } else if s.starts_with("```") {
@@ -46,7 +51,7 @@ pub struct LineState {
 
 impl From<String> for LineState {
     fn from(text: String) -> Self {
-        let line_type = LineType::detect(&text);
+        let line_type = LineType::from(text.as_str());
         Self {
             input: text,
             line_type,
@@ -77,13 +82,54 @@ impl _LocalLineHistory {
             current: 0,
         }
     }
-
     pub fn insert(&mut self, state: LineState) {
         self.current += 1;
         self.generations.insert(self.current, state);
     }
-
     pub fn get(&self, gen: usize) -> Option<&LineState> {
         self.generations.get(&gen)
+    }
+}
+
+pub struct RootNode {
+    pub nodes: _LocalLineHistory,
+}
+
+/// root で 一括管理している Node
+impl RootNode {}
+
+/// Render trait
+/// LineTypeの設定
+/// Element の動的生成
+pub trait Render {
+    fn split_lines(value: String) -> Vec<String>;
+    fn render_state_rsx(&self) -> DioxusElement;
+    fn render_state_jsx() -> WebSysElement;
+}
+
+impl Render for LineState {
+    fn split_lines(value: String) -> Vec<String> {
+        value.split('\n').map(|s| s.to_string()).collect()
+    }
+    fn render_state_rsx(&self) -> DioxusElement {
+        match &self.line_type {
+            LineType::Cursor | LineType::Paragraph => rsx! {
+                p { {&self.input.as_str()} }
+            },
+            LineType::Hedding => rsx! {
+                h2 { {&self.input.as_str()} }
+            },
+            LineType::Code => rsx! {
+                pre { code { {&self.input.as_str()} } }
+            },
+            LineType::Quote => rsx! {
+                blockquote { {&self.input.as_str()} }
+            },
+        }
+    }
+    fn render_state_jsx() -> WebSysElement {
+        // ts で使うときにテストする
+        let doc = window().unwrap().document().unwrap();
+        doc.create_element("p").unwrap()
     }
 }

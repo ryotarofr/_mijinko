@@ -5232,6 +5232,8 @@ dependencies = [
  "dioxus",
  "keyboard-types 0.8.0",
  "ui",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
