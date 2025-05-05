@@ -1,9 +1,5 @@
 use dioxus::prelude::Element as DioxusElement;
 use dioxus::prelude::*;
-/// 参考
-/// https://github.com/biomejs/biome/blob/main/crates/biome_markdown_parser/src/syntax/thematic_break_block.rs
-/// 構造について
-/// 入力情報の接頭辞から html を追加するだけの実装
 use std::collections::HashMap;
 use web_sys::window;
 use web_sys::Element as WebSysElement;
