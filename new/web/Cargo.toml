@@ -1,0 +1,16 @@
+[package]
+name = "web"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dioxus = { workspace = true, features = [] }
+keyboard-types = "0.8.0"
+ui = { workspace = true }
+wasm-bindgen = "0.2.100"
+web-sys = "0.3.77"
+
+[features]
+default = []
+web = ["dioxus/web"]
+server = ["dioxus/server"]
