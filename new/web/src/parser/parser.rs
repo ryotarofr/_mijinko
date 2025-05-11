@@ -1,14 +1,13 @@
 use dioxus::prelude::Element as DioxusElement;
 use dioxus::prelude::*;
 use std::collections::HashMap;
+use std::hash::Hash;
 use web_sys::window;
 use web_sys::Element as WebSysElement;
 
 /// ブロックインクリメントにする
 #[derive(Debug, Clone)]
 pub enum LineType {
-    /// 空の行などで使う
-    Cursor = 0,
     Paragraph = 1,
     Hedding = 2,
     Code = 3,
@@ -21,7 +20,7 @@ impl From<&str> for LineType {
     /// 一旦 replace はしない
     fn from(s: &str) -> Self {
         if s.is_empty() {
-            LineType::Cursor
+            LineType::Paragraph
         } else if s.starts_with("```") {
             LineType::Code
         } else if s.starts_with('#') {
@@ -43,6 +42,7 @@ pub struct LineState {
     pub line_type: LineType,
     // 履歴管理用(lexicalでやっているノードに紐づく値)
     // pub history: usize,
+    pub active: bool,
 }
 
 impl From<String> for LineState {
@@ -51,6 +51,17 @@ impl From<String> for LineState {
         Self {
             input: text,
             line_type,
+            active: true,
+        }
+    }
+}
+
+impl LineState {
+    pub fn new() -> Self {
+        Self {
+            input: String::new(),
+            line_type: LineType::Paragraph,
+            active: true,
         }
     }
 }
@@ -87,29 +98,26 @@ impl _LocalLineHistory {
     }
 }
 
-pub struct RootNode {
-    pub nodes: _LocalLineHistory,
-}
-
-/// root で 一括管理している Node
-impl RootNode {}
-
 /// Render trait
 /// LineTypeの設定
 /// Element の動的生成
 pub trait Render {
+    // fn insert() -> LineState;
     fn split_lines(value: String) -> Vec<String>;
     fn render_state_rsx(&self) -> DioxusElement;
     fn render_state_jsx() -> WebSysElement;
 }
 
 impl Render for LineState {
+    // fn insert() -> LineState {
+    //     LineState::new()
+    // }
     fn split_lines(value: String) -> Vec<String> {
         value.split('\n').map(|s| s.to_string()).collect()
     }
     fn render_state_rsx(&self) -> DioxusElement {
         match &self.line_type {
-            LineType::Cursor | LineType::Paragraph => rsx! {
+            LineType::Paragraph => rsx! {
                 p { {&self.input.as_str()} }
             },
             LineType::Hedding => rsx! {
@@ -128,4 +136,92 @@ impl Render for LineState {
         let doc = window().unwrap().document().unwrap();
         doc.create_element("p").unwrap()
     }
+}
+
+pub struct Editor {
+    pub content: LineState,
+    pub node: Node,
+}
+
+impl Editor {
+    pub fn insert(&mut self, key: &usize, node_tree: &NodeTree) -> Self {
+        let node = self.node.insert(key, node_tree);
+        Editor {
+            content: LineState::new(),
+            node,
+        }
+    }
+}
+
+/// 現在の位置情報を管理
+/// 現状は離散的
+pub struct Node {
+    pub key: usize,
+    pub parent: usize,
+    pub prev: Option<usize>,
+    pub next: Option<usize>,
+}
+
+impl Node {
+    fn insert(&mut self, key: &usize, node_tree: &NodeTree) -> Self {
+        Node {
+            key: node_tree.get_max_key() + 1,
+            parent: *key,
+            prev: None,
+            next: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NodeKey(pub usize);
+pub struct LinePos(pub usize);
+
+/// 全部
+pub struct NodeTree {
+    pub nodes: HashMap<NodeKey, Editor>,
+    pub current_key: NodeKey,
+    pub current_pos: LinePos,
+}
+
+impl NodeTree {
+    pub fn get_max_key(&self) -> usize {
+        self.nodes.keys().map(|k| k.0).max().unwrap_or(0)
+    }
+    pub fn set_current_key(&mut self, active_key: usize) {
+        self.current_key = NodeKey(active_key);
+    }
+    pub fn set_current_pos(&mut self, pos: usize) {
+        self.current_pos = LinePos(pos);
+    }
+    // IME 確定状態 or IME じゃないときのすべてで enter 押されたとき
+    pub fn insert(&mut self, key: usize) -> &mut Self {
+        // key は 現在 active な要素がわたってくる
+        let next_key = self.get_max_key() + 1;
+        // Node の発行
+        let node = Node {
+            key: next_key,
+            parent: key,
+            prev: None,
+            next: None,
+        };
+        // Editor の発行
+        let editor = Editor {
+            content: LineState::new(),
+            node,
+        };
+        // NodeTree の発行
+        self.nodes.insert(NodeKey(next_key), editor);
+        self.set_current_key(key);
+        self.set_current_pos(0);
+        self
+    }
+
+    // NodeTree::current の value が 0 のときに backspace が押されたとき
+    fn remove(&mut self, key: NodeKey) {
+        todo!()
+    }
+
+    // アプリケーション側で ref などを使って (ref.current = key など) active なノードを取得し NodeTree 伝番のため毎回発火する
+    pub fn go_to_line(self, active_key: &str) {}
 }
