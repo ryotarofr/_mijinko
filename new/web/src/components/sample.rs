@@ -16,6 +16,19 @@ pub fn Sample() -> Element {
             LineState::render_state_rsx(&state)
         });
 
+    // ↓ discord にあったサンプル
+    // let mut nodes = match dynamic_nodes[0] {
+    //     DynamicNode::Fragment(ref nodes) => nodes.clone(),
+    //     _ => Vec::with_capacity(1),
+    // };
+    // let node = rsx! {
+    //     div { "hello" }
+    // }
+    // .unwrap();
+    // nodes.push(node);
+    // let dnodes = Box::new([DynamicNode::Fragment(nodes)]);
+    // let new_node = VNode::new(key, template, dnodes, dynamic_attrs);
+
     rsx! {
         div {
             div {
